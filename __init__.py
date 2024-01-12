@@ -1,8 +1,10 @@
-from PyQt5.QtWidgets import QFileDialog, QAction
-from aqt.sound import AVPlayer, play, clearAudioQueue
-from aqt import gui_hooks, tr, qconnect
 import os
+from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import QFileDialog
+from aqt import gui_hooks, qconnect
 from aqt import mw
+from aqt.sound import AVPlayer, play, clearAudioQueue
+from aqt.webview import AnkiWebView, AnkiWebViewKind
 
 addon_path = os.path.dirname(__file__)
 user_files = os.path.join(addon_path, "user_files")
@@ -16,14 +18,16 @@ else:
     mw.addonManager.writeConfig(__name__, setting)
 
 
-def myfunc():  # FIXME: addons21\978869609\__init__.py:21:to avoid memory leaks, pass an appropriate parent to progress.timer() or use progress.single_shot()
+def play_sound(webview: AnkiWebView):
+    if webview.kind != AnkiWebViewKind.MAIN:
+        return
     clearAudioQueue()
-    mw.progress.timer(
+    mw.progress.single_shot(
         1, lambda: play(sound_file), False
     )
 
 
-gui_hooks.reviewer_will_end.append(myfunc)
+gui_hooks.webview_did_inject_style_into_page.append(play_sound)
 
 
 def _play_tags(self, tags):
@@ -43,8 +47,8 @@ def updateSound():
         sound_file = file_name[0]
         setting = {"sound": sound_file}
         mw.addonManager.writeConfig(__name__, setting)
-        gui_hooks.reviewer_will_end.remove(myfunc)
-        gui_hooks.reviewer_will_end.append(myfunc)
+        gui_hooks.webview_did_inject_style_into_page.remove(play_sound)
+        gui_hooks.webview_did_inject_style_into_page.append(play_sound)
 
 
 action = QAction("Change completion jingle")
